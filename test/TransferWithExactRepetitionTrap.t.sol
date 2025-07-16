@@ -82,7 +82,7 @@ contract TransferWithExactRepetitionTrapTest is Test {
             from: address(1), 
             to: address(200), 
             amount: 2 ether,
-            blockNumber: 1000, // same block
+            blockNumber: 1000,
             txHash: keccak256("tx1"),
             timestamp: block.timestamp
         });
@@ -244,7 +244,7 @@ contract TransferWithExactRepetitionTrapTest is Test {
         logs[1] = TransferWithExactRepetitionTrap.TransferEvent({
             from: address(2), 
             to: address(200), 
-            amount: 2 ether, // repetition
+            amount: 2 ether,
             blockNumber: 1001,
             txHash: keccak256("tx2"),
             timestamp: block.timestamp + 1
