@@ -22,8 +22,8 @@ contract ResponseToTransferRepetition {
 
     struct RepeatedTransferLog {
         address recipient;
-        uint256 amount;
-        uint256 timestamp;
+        uint128 amount;
+        uint64 timestamp;
         address trapOwner;
     }
 
@@ -34,9 +34,9 @@ contract ResponseToTransferRepetition {
     event RepeatedTransferLogged(
         address indexed trapAddress,
         address indexed trapOwner,
-        address recipient,
-        uint256 amount,
-        uint256 timestamp
+        address indexed recipient,
+        uint128 amount,
+        uint64 timestamp
     );
 
     constructor(address _droseraSystem) {
@@ -52,21 +52,24 @@ contract ResponseToTransferRepetition {
         ITransferWithExactRepetitionTrap.TransferEvent[] memory logs =
             abi.decode(_data[1], (ITransferWithExactRepetitionTrap.TransferEvent[]));
 
-        bytes32[] memory keysSeen = new bytes32[](logs.length);
-        uint256[] memory counts = new uint256[](logs.length);
+        uint256 logCount = logs.length;
+        if (logCount == 0 || logCount > 100) revert("Invalid log size");
+
+        bytes32[] memory keysSeen = new bytes32[](logCount);
+        uint256[] memory counts = new uint256[](logCount);
         uint256 uniqueKeyCount = 0;
 
-        bytes32 repeatedKey = 0;
+        bytes32 repeatedKey;
         bool foundRepetition = false;
 
-        for (uint256 i = 0; i < logs.length; i++) {
+        for (uint256 i = 0; i < logCount; i++) {
             bytes32 currentKey = keccak256(abi.encode(logs[i].to, logs[i].amount));
+            bool found = false;
 
-            bool foundInSeenKeys = false;
             for (uint256 j = 0; j < uniqueKeyCount; j++) {
                 if (keysSeen[j] == currentKey) {
                     counts[j]++;
-                    foundInSeenKeys = true;
+                    found = true;
                     if (counts[j] >= 2) {
                         repeatedKey = currentKey;
                         foundRepetition = true;
@@ -75,36 +78,36 @@ contract ResponseToTransferRepetition {
                 }
             }
 
-            if (!foundInSeenKeys) {
+            if (!found) {
                 keysSeen[uniqueKeyCount] = currentKey;
                 counts[uniqueKeyCount] = 1;
                 uniqueKeyCount++;
             }
 
-            if (foundRepetition) {
-                break;
-            }
+            if (foundRepetition) break;
         }
-
-        require(foundRepetition, "No repetition detected in provided logs.");
+        require(foundRepetition, "No repetition detected");
 
         address detectedRecipient = address(0);
-        uint256 detectedAmount = 0;
-        for (uint256 i = 0; i < logs.length; i++) {
+        uint128 detectedAmount = 0;
+
+        for (uint256 i = 0; i < logCount; i++) {
             if (keccak256(abi.encode(logs[i].to, logs[i].amount)) == repeatedKey) {
                 detectedRecipient = logs[i].to;
-                detectedAmount = logs[i].amount;
+                detectedAmount = uint128(logs[i].amount);
                 break;
             }
         }
 
         if (!hasLoggedRepeatedTransfer[trapOwner][repeatedKey]) {
-            repeatedTransferLogs.push(RepeatedTransferLog({
-                recipient: detectedRecipient,
-                amount: detectedAmount,
-                timestamp: block.timestamp,
-                trapOwner: trapOwner
-            }));
+            repeatedTransferLogs.push(
+                RepeatedTransferLog({
+                    recipient: detectedRecipient,
+                    amount: detectedAmount,
+                    timestamp: uint64(block.timestamp),
+                    trapOwner: trapOwner
+                })
+            );
 
             hasLoggedRepeatedTransfer[trapOwner][repeatedKey] = true;
 
@@ -113,15 +116,15 @@ contract ResponseToTransferRepetition {
                 trapOwner,
                 detectedRecipient,
                 detectedAmount,
-                block.timestamp
+                uint64(block.timestamp)
             );
         }
     }
 
     function getRepeatedTransferLog(uint256 _index) external view returns (
         address recipient,
-        uint256 amount,
-        uint256 timestamp,
+        uint128 amount,
+        uint64 timestamp,
         address trapOwner
     ) {
         require(_index < repeatedTransferLogs.length, "Index out of bounds");

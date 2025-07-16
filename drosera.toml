@@ -7,7 +7,7 @@ drosera_address = "0x91cB447BaFc6e0EA0F4Fe056F5a9b1F14bb06e5D"
 
 [traps.TransferRepetitionTrap]
 path = "out/TransferWithExactRepetitionTrap.sol/TransferWithExactRepetitionTrap.json"
-response_contract = "0xbcF3EEd2c42ef59405D58B25a7C8B1B136cD669B"
+response_contract = "0x61C040f01fbb70E6d8e377E13c4C6793835e790e"
 response_function = "respondToRepetition(bytes[])"
 cooldown_period_blocks = 33
 min_number_of_operators = 1
